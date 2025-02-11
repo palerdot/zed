@@ -7877,10 +7877,14 @@ dependencies = [
 name = "migrator"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "collections",
  "convert_case 0.7.1",
+ "fs",
  "log",
+ "paths",
  "pretty_assertions",
+ "settings",
  "streaming-iterator",
  "tree-sitter",
  "tree-sitter-json",
@@ -12035,7 +12039,6 @@ dependencies = [
  "indoc",
  "inventory",
  "log",
- "migrator",
  "paths",
  "pretty_assertions",
  "release_channel",
@@ -16647,6 +16650,7 @@ dependencies = [
  "markdown",
  "markdown_preview",
  "menu",
+ "migrator",
  "mimalloc",
  "nix",
  "node_runtime",

@@ -1,8 +1,61 @@
+use anyhow::Result;
 use collections::HashMap;
 use convert_case::{Case, Casing};
-use std::{cmp::Reverse, ops::Range, sync::LazyLock};
+use fs::Fs;
+use settings::{KeymapFile, SettingsStore};
+use std::{
+    cmp::Reverse,
+    ops::Range,
+    sync::{Arc, LazyLock},
+};
 use streaming_iterator::StreamingIterator;
 use tree_sitter::{Query, QueryMatch};
+
+pub struct Migrator {}
+
+impl Migrator {
+    // pub async fn should_migrate_keymap(fs: &Arc<dyn Fs>) -> Result<bool> {
+    //     let old_text = KeymapFile::load_keymap_file(fs).await?;
+    //     Ok(migrate_keymap_internal(&old_text).is_some())
+    // }
+
+    // pub async fn should_migrate_settings(fs: &Arc<dyn Fs>) -> Result<bool> {
+    //     let old_text = SettingsStore::load_settings(fs).await?;
+    //     Ok(migrate_settings_internal(&old_text).is_some())
+    // }
+
+    pub fn migrate_keymap_in_memory(old_text: String) -> String {
+        if let Some(new_text) = migrate_keymap_internal(&old_text) {
+            return new_text;
+        };
+        old_text
+    }
+
+    pub fn migrate_settings_in_memory(old_text: String) -> String {
+        if let Some(new_text) = migrate_settings_internal(&old_text) {
+            return new_text;
+        };
+        old_text
+    }
+
+    pub async fn write_keymap_migration(fs: &Arc<dyn Fs>) -> Result<()> {
+        let old_text = KeymapFile::load_keymap_file(fs).await?;
+        let Some(new_text) = migrate_keymap_internal(&old_text) else {
+            return Ok(());
+        };
+        KeymapFile::write_keymap_file(new_text, old_text, fs).await?;
+        Ok(())
+    }
+
+    pub async fn write_settings_migration(fs: &Arc<dyn Fs>) -> Result<()> {
+        let old_text = SettingsStore::load_settings(fs).await?;
+        let Some(new_text) = migrate_settings_internal(&old_text) else {
+            return Ok(());
+        };
+        SettingsStore::write_settings_file(new_text, old_text, fs).await?;
+        Ok(())
+    }
+}
 
 fn migrate(text: &str, patterns: MigrationPatterns, query: &Query) -> Option<String> {
     let mut parser = tree_sitter::Parser::new();
@@ -45,7 +98,7 @@ fn migrate(text: &str, patterns: MigrationPatterns, query: &Query) -> Option<Str
     }
 }
 
-pub fn migrate_keymap(text: &str) -> Option<String> {
+fn migrate_keymap_internal(text: &str) -> Option<String> {
     let transformed_text = migrate(
         text,
         KEYMAP_MIGRATION_TRANSFORMATION_PATTERNS,
@@ -59,7 +112,7 @@ pub fn migrate_keymap(text: &str) -> Option<String> {
     replacement_text.or(transformed_text)
 }
 
-pub fn migrate_settings(text: &str) -> Option<String> {
+fn migrate_settings_internal(text: &str) -> Option<String> {
     migrate(
         &text,
         SETTINGS_MIGRATION_PATTERNS,
@@ -630,12 +683,12 @@ mod tests {
     use super::*;
 
     fn assert_migrate_keymap(input: &str, output: Option<&str>) {
-        let migrated = migrate_keymap(&input);
+        let migrated = migrate_keymap_internal(&input);
         pretty_assertions::assert_eq!(migrated.as_deref(), output);
     }
 
     fn assert_migrate_settings(input: &str, output: Option<&str>) {
-        let migrated = migrate_settings(&input);
+        let migrated = migrate_settings_internal(&input);
         pretty_assertions::assert_eq!(migrated.as_deref(), output);
     }
 
