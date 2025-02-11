@@ -995,32 +995,6 @@ impl SettingsStore {
         properties.use_fallbacks();
         Some(properties)
     }
-
-    pub async fn write_settings_file(
-        new_text: String,
-        old_text: String,
-        fs: &Arc<dyn Fs>,
-    ) -> Result<()> {
-        let settings_path = paths::settings_file().as_path();
-        if fs.is_file(settings_path).await {
-            fs.atomic_write(paths::settings_backup_file().to_path_buf(), old_text)
-                .await
-                .with_context(|| {
-                    "Failed to create settings backup in home directory".to_string()
-                })?;
-            let resolved_path = fs.canonicalize(settings_path).await.with_context(|| {
-                format!("Failed to canonicalize settings path {:?}", settings_path)
-            })?;
-            fs.atomic_write(resolved_path.clone(), new_text)
-                .await
-                .with_context(|| format!("Failed to write settings to file {:?}", resolved_path))?;
-        } else {
-            fs.atomic_write(settings_path.to_path_buf(), new_text)
-                .await
-                .with_context(|| format!("Failed to write settings to file {:?}", settings_path))?;
-        }
-        Ok(())
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

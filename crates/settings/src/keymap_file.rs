@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, Result};
 use collections::{BTreeMap, HashMap, IndexMap};
 use fs::Fs;
 use gpui::{
@@ -602,33 +602,6 @@ impl KeymapFile {
                 Err(err)
             }
         }
-    }
-
-    pub async fn write_keymap_file(
-        new_text: String,
-        old_text: String,
-        fs: &Arc<dyn Fs>,
-    ) -> Result<()> {
-        let keymap_path = paths::keymap_file().as_path();
-        if fs.is_file(keymap_path).await {
-            fs.atomic_write(paths::keymap_backup_file().to_path_buf(), old_text)
-                .await
-                .with_context(|| {
-                    "Failed to create settings backup in home directory".to_string()
-                })?;
-            let resolved_path = fs
-                .canonicalize(keymap_path)
-                .await
-                .with_context(|| format!("Failed to canonicalize keymap path {:?}", keymap_path))?;
-            fs.atomic_write(resolved_path.clone(), new_text)
-                .await
-                .with_context(|| format!("Failed to write keymap to file {:?}", resolved_path))?;
-        } else {
-            fs.atomic_write(keymap_path.to_path_buf(), new_text)
-                .await
-                .with_context(|| format!("Failed to write keymap to file {:?}", keymap_path))?;
-        }
-        Ok(())
     }
 }
 
